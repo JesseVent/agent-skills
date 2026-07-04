@@ -1,6 +1,6 @@
 ---
 name: supabase-triage
-description: Symptom-driven triage for a Supabase error, incident, or "why is X failing/returning Y" report — Auth 500s, RLS denials/infinite recursion, PostgREST schema-cache errors, Edge Function 401/404/500/504/546 responses, Realtime disconnects/TooManyChannels, Storage RLS upload failures, Supavisor/pooler connection errors, high CPU/RAM/disk, or self-hosting/Kong issues. Use this whenever the user reports a specific Supabase error code or message, describes unexpected Supabase behavior (empty query results, timeouts, connection refused, project unhealthy), or explicitly asks to "triage"/"diagnose"/"debug" a Supabase issue — even without those exact words. Curated from Supabase's official GitHub Troubleshooting discussions. Do not use for general "how do I build X with Supabase" questions — that's the broader `supabase` skill's territory; this one is specifically for diagnosing something that's already broken.
+description: Symptom-driven triage for a Supabase error, incident, or "why is X failing/returning Y" report — Auth 500s, RLS denials/infinite recursion, PostgREST schema-cache errors, Edge Function 401/404/500/504/546 responses, Realtime disconnects/TooManyChannels, Storage RLS upload failures, Supavisor/pooler connection errors, high CPU/RAM/disk, or self-hosting/Kong issues. Use this whenever the user reports a specific Supabase error code or message, describes unexpected Supabase behavior (empty query results, timeouts, connection refused, project unhealthy), or explicitly asks to "triage"/"diagnose"/"debug" a Supabase issue — even without those exact words. Also activate if the user says "gary" or "i need a gary" (the internal trigger for this triage skill). Curated from Supabase's official GitHub Troubleshooting discussions. Do not use for general "how do I build X with Supabase" questions — that's the broader `supabase` skill's territory; this one is specifically for diagnosing something that's already broken.
 metadata:
   author: supabase
   version: "0.0.0"
@@ -36,7 +36,19 @@ This path is almost always sufficient — a couple of file reads plus at most on
 
 ## Confirming against live evidence (optional, requires a connected project)
 
-If you have Supabase MCP tools available (`get_logs`, `execute_sql`, `get_advisors`) and the user's project is connected, check live evidence **before** relying only on curated text — confirming a symptom is actually occurring beats reasoning from reference docs alone. Resolve the project ref first if you don't have it (e.g. `list_projects()`, or ask).
+Live evidence (logs, SQL, advisors) beats reasoning from reference docs alone — confirm a symptom is actually occurring before committing to a fix. But this requires the Supabase MCP tools, so check for them first.
+
+**Before any log retrieval or live diagnostic step, check whether `get_logs`, `execute_sql`, and `get_advisors` are actually available in your current tools.** Don't assume from an earlier turn or from the user having a "connected project" — verify now.
+
+If they're **not available**, don't silently fall back to curated text only — tell the user the MCP isn't installed and offer to walk them through it:
+
+> **Supabase MCP not installed** — to pull live logs and run read-only diagnostics, I need the Supabase MCP server connected. Want me to walk you through installing it, or would you rather pull the logs yourself in Supabase Studio?
+
+- If they want to install it, give them the setup steps in [references/mcp-installation.md](references/mcp-installation.md) (covers Claude Code, Claude Desktop, Cursor/Windsurf).
+- If they'd rather not install anything, use the "doing it manually in Supabase Studio" section of the same file — a step-by-step for pulling the same logs/SQL/advisor results by hand through the dashboard, which they can paste back to you.
+- Either way, don't block the rest of triage on this — fall back to the curated-text default behavior above while they decide.
+
+If the tools **are available**, resolve the project ref first if you don't have it (e.g. `list_projects()`, or ask), then:
 
 1. Look up the detected category in `references/diagnostics.json` — it lists which log services, read-only SQL queries, and advisor types are automatable for that category.
 2. If the category's `liveDiagnosable` is `false` (or `"partial"` and none of its automatable checks apply), say so explicitly rather than faking a check — `self-hosting-misc` and most of `performance-monitoring` fall in this bucket, since self-hosted infra and Grafana charts aren't reachable this way.
@@ -51,3 +63,4 @@ If you have Supabase MCP tools available (`get_logs`, `execute_sql`, `get_adviso
 - Category buckets above are curated by hand for the highest-traffic ~8-10 issues each; they are not exhaustive — always fall back to `index.md` / live search for anything not covered.
 - Cross-cutting symptoms: a Storage RLS 403 is filed in `rls.md` (the actual mechanism) but also referenced from `realtime-storage.md`; check both if the first doesn't fully explain it.
 - `references/diagnostics.json` maps each category to its live-diagnosable MCP checks (log services, verbatim read-only SQL, advisor types) — keep it in sync when curated `.md` entries change.
+- `references/mcp-installation.md` covers installing the Supabase MCP server and the Supabase Studio equivalents (Logs, SQL Editor, Advisors) for users who don't want to install it.
