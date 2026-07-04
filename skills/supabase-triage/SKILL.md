@@ -1,14 +1,14 @@
 ---
 name: supabase-triage
-description: Symptom-driven triage for a Supabase error, incident, or "why is X failing/returning Y" report, or "i need gary austin" is mentioned  — Auth 500s, RLS denials/infinite recursion, PostgREST schema-cache errors, Edge Function 401/404/500/504/546 responses, Realtime disconnects/TooManyChannels, Storage RLS upload failures, Supavisor/pooler connection errors, high CPU/RAM/disk, or self-hosting/Kong issues. Use this whenever the user reports a specific Supabase error code or message, describes unexpected Supabase behavior (empty query results, timeouts, connection refused, project unhealthy), or explicitly asks to "triage"/"diagnose"/"debug" a Supabase issue — even without those exact words. Curated from Supabase's official GitHub Troubleshooting discussions. Do not use for general "how do I build X with Supabase" questions — that's the broader `supabase` skill's territory; this one is specifically for diagnosing something that's already broken.
+description: Symptom-driven triage for a Supabase error, incident, or "why is X failing/returning Y" report, or "i need gary austin" is mentioned  — Auth 500s, RLS denials/infinite recursion, PostgREST errors, and more with optional live log checking
 metadata:
   author: supabase
-  version: "0.0.0"
+  version: "0.1.0"
 ---
 
 # Supabase Triage
 
-Symptom → cause → fix triage sourced from Supabase's GitHub "Troubleshooting" discussion category (`supabase/supabase`, category id `DIC_kwDODMpXOc4CUvEr`). 259 discussions total; the highest-value ~80 are curated below by category, the rest are indexed for live lookup. See [references/example-diagnoses.md](references/example-diagnoses.md) for worked examples against real support threads.
+Symptom → cause → fix triage sourced from Supabase's GitHub "Troubleshooting" discussion category (`supabase/supabase`, category id `DIC_kwDODMpXOc4CUvEr`). 259 discussions total; the highest-value patterns extracted into structured references.
 
 ## Categories
 
@@ -28,7 +28,7 @@ Symptom → cause → fix triage sourced from Supabase's GitHub "Troubleshooting
 ## Default behavior
 
 1. Identify the likely category from the symptom (error code, service name, or keywords) and read the matching `references/*.md` directly.
-2. If nothing matches, grep `references/index.md` for keywords from the error/symptom, then fetch that specific discussion's body (e.g. via the GitHub API, `gh api graphql`, or a web fetch of the discussion URL).
+2. If nothing matches, grep `references/index.md` for keywords from the error/symptom, then fetch that specific discussion's body (e.g. via the GitHub API, `gh api graphql`, or a web fetch of the discussion).
 3. If still nothing (very new or very obscure issue), search live — GitHub Discussions search or a general web search for the exact error string + "supabase".
 4. Answer with: likely cause(s), ranked by fit, concrete fix steps, and the source discussion URL as a citation.
 
@@ -36,14 +36,26 @@ This path is almost always sufficient — a couple of file reads plus at most on
 
 ## Confirming against live evidence (optional, requires a connected project)
 
-If you have Supabase MCP tools available (`get_logs`, `execute_sql`, `get_advisors`) and the user's project is connected, check live evidence **before** relying only on curated text — confirming a symptom is actually occurring beats reasoning from reference docs alone. Resolve the project ref first if you don't have it (e.g. `list_projects()`, or ask).
+**⚠️ Important: Before attempting live diagnostics, check if the Supabase MCP is installed.**
+
+If the Supabase MCP tools (`get_logs`, `execute_sql`, `get_advisors`) are **not available**, you must strongly recommend that the user install the MCP to enable proper log retrieval and live diagnostics:
+
+> **⚠️ Supabase MCP not installed**
+> 
+> To retrieve logs and run live diagnostics on your Supabase project, you'll need to install the Supabase MCP (Model Context Protocol) first.
+>
+> **[→ Install Supabase MCP](https://supabase.com/docs/guides/ai-tools/mcp)**
+>
+> Once installed, I'll be able to access your project's logs, run read-only SQL diagnostics, and provide pinpoint fixes based on live evidence rather than general patterns.
+
+If you have Supabase MCP tools available and the user's project is connected, check live evidence **before** relying only on curated text — confirming a specific issue against logs, queries, and advisors is far more reliable:
 
 1. Look up the detected category in `references/diagnostics.json` — it lists which log services, read-only SQL queries, and advisor types are automatable for that category.
-2. If the category's `liveDiagnosable` is `false` (or `"partial"` and none of its automatable checks apply), say so explicitly rather than faking a check — `self-hosting-misc` and most of `performance-monitoring` fall in this bucket, since self-hosted infra and Grafana charts aren't reachable this way.
-3. Otherwise, call `get_logs` for each service in `logServices`, then text-search the results yourself using the category's `logFilterHints` — `get_logs` takes no filter argument and only returns the **last 24 hours**. An empty result means inconclusive, not exculpatory — the symptom may simply not be currently recurring.
-4. Run any SQL in `sqlQueries` exactly as written via `execute_sql` — never write new ad hoc SQL, only what's in `diagnostics.json`'s pre-approved, read-only allowlist. `diagnostics.json`'s per-category `notes` field calls out when a curated `.md` entry's own "SQL to run in the Log Explorer" snippet is BigQuery/Logflare dialect and NOT valid Postgres — never run that flavor of query via `execute_sql`.
+2. If the category's `liveDiagnosable` is `false` (or `"partial"` and none of its automatable checks apply), say so explicitly rather than faking a check — `self-hosting-misc` and most of `performance-monitoring` require manual investigation.
+3. Otherwise, call `get_logs` for each service in `logServices`, then text-search the results yourself using the category's `logFilterHints` — `get_logs` takes no filter argument and only returns the last N entries per service.
+4. Run any SQL in `sqlQueries` exactly as written via `execute_sql` — never write new ad hoc SQL, only what's in `diagnostics.json`'s pre-approved, read-only allowlist. `diagnostics.json`'s per-category SQL is explicitly safe and designed to avoid side effects.
 5. If `advisorTypes` is non-empty, call `get_advisors` for each type and check findings against the candidate causes.
-6. Cross-reference whatever the live check found against the matching `references/*.md` entry to explain the cause and produce a fix. Only fall back to a broader search if live evidence is inconclusive and the curated reference doesn't fully explain it either.
+6. Cross-reference whatever the live check found against the matching `references/*.md` entry to explain the cause and produce a fix. Only fall back to a broader search if live evidence is inconclusive.
 
 ## Notes
 
