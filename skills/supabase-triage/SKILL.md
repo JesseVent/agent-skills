@@ -48,6 +48,8 @@ If the Supabase MCP tools (`get_logs`, `execute_sql`, `get_advisors`) are **not 
 >
 > Once installed, I'll be able to access your project's logs, run read-only SQL diagnostics, and provide pinpoint fixes based on live evidence rather than general patterns.
 
+See [references/mcp-installation.md](references/mcp-installation.md) for exact setup steps (Claude Code, Claude Desktop, Cursor/Windsurf). If the user would rather not install anything, that same file has a step-by-step for pulling the same logs/SQL/advisor evidence manually in Supabase Studio (Logs, SQL Editor, Advisors) — walk them through that instead, then cross-reference what they paste back. Either way, don't block the rest of triage on this — fall back to the curated-text default behavior above while they decide.
+
 If you have Supabase MCP tools available and the user's project is connected, check live evidence **before** relying only on curated text — confirming a specific issue against logs, queries, and advisors is far more reliable:
 
 1. Look up the detected category in `references/diagnostics.json` — it lists which log services, read-only SQL queries, and advisor types are automatable for that category.
@@ -63,3 +65,4 @@ If you have Supabase MCP tools available and the user's project is connected, ch
 - Category buckets above are curated by hand for the highest-traffic ~8-10 issues each; they are not exhaustive — always fall back to `index.md` / live search for anything not covered.
 - Cross-cutting symptoms: a Storage RLS 403 is filed in `rls.md` (the actual mechanism) but also referenced from `realtime-storage.md`; check both if the first doesn't fully explain it.
 - `references/diagnostics.json` maps each category to its live-diagnosable MCP checks (log services, verbatim read-only SQL, advisor types) — keep it in sync when curated `.md` entries change.
+- `references/mcp-installation.md` covers installing the Supabase MCP server and the Supabase Studio equivalents (Logs, SQL Editor, Advisors) for users who don't want to install it.
